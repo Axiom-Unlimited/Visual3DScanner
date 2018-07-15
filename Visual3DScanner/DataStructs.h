@@ -5,12 +5,32 @@
 
 #include "opencv2/core.hpp"
 
-struct ImageStruct
+struct PatchModel
 {
-	int index;
-	cv::Mat Image;
-	cv::Mat ProjectionMat;
-	std::vector<cv::Point> featurePoints;
+	int meu_patch_size = 5;
+	cv::Point center;
+	cv::Vec3d normal; 
+	std::vector<std::shared_ptr<cv::Mat>> T_p; // other images where this patch is also visible
+	std::shared_ptr<cv::Mat> referenceImage; // a pointer to the reference image.
+};
+
+struct Cell
+{
+	int first_x;
+	int last_x;
+	int first_y;
+	int last_y;
+	std::vector<double> Q_t_depths;
+	std::vector<std::shared_ptr<PatchModel>> Q_t; // a patch is stored here if the patch is truly visible in this cell
+	std::vector<std::shared_ptr<PatchModel>> Q_f; // a patch is stored here if the patch is occluded by something but would otherwise be struc by a ray cast from the camera
+};
+
+struct ImageModel
+{
+	cv::Mat image;
+	cv::Mat intrinsicParams;
+	cv::Mat extrinsicParams;
+	int beta_cell_size = 2;
 };
 
 #endif
