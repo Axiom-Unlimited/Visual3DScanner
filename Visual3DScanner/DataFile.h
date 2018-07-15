@@ -6,6 +6,7 @@
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <tuple>
 
 #include "boost/filesystem.hpp"
 #include "boost/iostreams/filtering_stream.hpp"
@@ -18,26 +19,21 @@ private:
 	std::vector<cv::Mat> _images;
 	std::vector<cv::Mat> _projectMats;
 	std::ifstream _fileStream;
-	cv::Mat _K;
-	cv::Mat _Rt;
+	std::vector<cv::Mat> _K;
+	std::vector<cv::Mat> _Rt;
 	int _dataSize;
-	int _index;
 
 public:
 	//constructor
 	DataFile(std::string dirName, std::string fileName);
-	// get next data set
-	std::pair<cv::Mat, cv::Mat> getNext();
 
-	std::pair<cv::Mat, cv::Mat> getNext(int index);
+	std::tuple<cv::Mat, cv::Mat, cv::Mat, cv::Mat> getNext(int index);
 	
 	int getDataSize() const;
 
-	void resetIndex();
-
 };
 
-inline DataFile::DataFile(std::string dirName, std::string fileName) : _index(0)
+inline DataFile::DataFile(std::string dirName, std::string fileName)
 {
 	//const std::regex e("\\+");
 	std::string l_dirName = dirName/*std::regex_replace(dirName, e, "/")*/;
@@ -73,47 +69,35 @@ inline DataFile::DataFile(std::string dirName, std::string fileName) : _index(0)
 			_images.push_back(img);
 			
 			// projection mat = K * [R t]
-			_K = (cv::Mat_<double>(3, 3) <<	std::stod(strs[1])	, std::stod(strs[2]), std::stod(strs[3])
+			cv::Mat K = (cv::Mat_<double>(3, 3) <<	std::stod(strs[1])	, std::stod(strs[2]), std::stod(strs[3])
 													, std::stod(strs[4]), std::stod(strs[5]), std::stod(strs[6])
 													, std::stod(strs[7]), std::stod(strs[8]), std::stod(strs[9]));
 
-			_Rt = (cv::Mat_<double>(3, 4) << std::stod(strs[10])		, std::stod(strs[11]), std::stod(strs[12]), std::stod(strs[19])
+			cv::Mat Rt = (cv::Mat_<double>(3, 4) << std::stod(strs[10])		, std::stod(strs[11]), std::stod(strs[12]), std::stod(strs[19])
 													, std::stod(strs[13])	, std::stod(strs[14]), std::stod(strs[15]), std::stod(strs[20])
 													, std::stod(strs[16])	, std::stod(strs[17]), std::stod(strs[18]), std::stod(strs[21]));
 
-			cv::Mat projMat = _K * _Rt;
+			cv::Mat projMat = K * Rt;
 			//std::cout << "projecteion matrix: \n" << projMat << std::endl << std::endl;
 			_projectMats.push_back(std::move(projMat));
+			_K.push_back(std::move(K));
+			_Rt.push_back(std::move(Rt));
 		}
 		index++;
 	}
 
 }
 
-inline std::pair<cv::Mat, cv::Mat> DataFile::getNext()
-{
-	
-	if (!_images.empty() && !_projectMats.empty() && _index < _images.size() && _index < _projectMats.size())
-	{
-		std::pair<cv::Mat, cv::Mat> ret;
-		ret.first = _images.at(_index).clone();
-		ret.second = _projectMats.at(_index).clone();
-		_index++;
-		return ret;
-	}
-	return  std::pair<cv::Mat, cv::Mat>();
-}
-
-inline std::pair<cv::Mat, cv::Mat> DataFile::getNext(int index)
+inline std::tuple<cv::Mat, cv::Mat, cv::Mat, cv::Mat> DataFile::getNext(int index)
 {
 	if (!_images.empty() && !_projectMats.empty() && index < _images.size() && index < _projectMats.size())
 	{
-		std::pair<cv::Mat, cv::Mat> ret;
-		ret.first = _images.at(index).clone();
-		ret.second = _projectMats.at(index).clone();
-		return ret;
+		return std::make_tuple( _images.at(index).clone()
+			,_projectMats.at(index).clone()
+			,_K.at(index).clone()
+			,_Rt.at(index).clone() );
 	}
-	return  std::pair<cv::Mat, cv::Mat>();
+	return std::make_tuple(cv::Mat(), cv::Mat(), cv::Mat(), cv::Mat());
 }
 
 inline int DataFile::getDataSize() const
@@ -121,8 +105,4 @@ inline int DataFile::getDataSize() const
 	return _dataSize - 1;
 }
 
-inline void DataFile::resetIndex()
-{
-	_index = 0;
-}
 #endif

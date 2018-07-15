@@ -17,9 +17,10 @@ struct PatchModel
 struct Cell
 {
 	int first_x;
-	int last_x;
 	int first_y;
-	int last_y;
+	int size;
+	std::vector<cv::KeyPoint> key_points;
+	cv::Mat features;
 	std::vector<double> Q_t_depths;
 	std::vector<std::shared_ptr<PatchModel>> Q_t; // a patch is stored here if the patch is truly visible in this cell
 	std::vector<std::shared_ptr<PatchModel>> Q_f; // a patch is stored here if the patch is occluded by something but would otherwise be struc by a ray cast from the camera
@@ -28,9 +29,15 @@ struct Cell
 struct ImageModel
 {
 	cv::Mat image;
+	cv::Mat projectionMat;
 	cv::Mat intrinsicParams;
 	cv::Mat extrinsicParams;
 	int beta_cell_size = 2;
+	std::vector<std::shared_ptr<Cell>> cells;
+
+	ImageModel(cv::Mat&& in_image, cv::Mat&& in_projMat,cv::Mat&& in_intrParam,cv::Mat&& in_extParam ) : 
+		image(std::move(in_image)),projectionMat(std::move(in_projMat)),intrinsicParams(std::move(in_intrParam)), extrinsicParams(std::move(in_extParam)){};
+
 };
 
 #endif

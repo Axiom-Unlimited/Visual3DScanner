@@ -151,8 +151,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="CommonUtils.h" />
     <ClInclude Include="DataFile.h" />
     <ClInclude Include="DataStructs.h" />
+    <ClInclude Include="DetectFeatures.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
