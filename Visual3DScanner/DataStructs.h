@@ -16,6 +16,7 @@ struct PatchModel
 
 struct Cell
 {
+	int image_index;
 	int first_x;
 	int first_y;
 	int size;
