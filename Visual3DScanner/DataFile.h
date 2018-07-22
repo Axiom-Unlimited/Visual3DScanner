@@ -73,11 +73,12 @@ inline DataFile::DataFile(std::string dirName, std::string fileName)
 													, std::stod(strs[4]), std::stod(strs[5]), std::stod(strs[6])
 													, std::stod(strs[7]), std::stod(strs[8]), std::stod(strs[9]));
 
-			cv::Mat Rt = (cv::Mat_<double>(3, 4) << std::stod(strs[10])		, std::stod(strs[11]), std::stod(strs[12]), std::stod(strs[19])
-													, std::stod(strs[13])	, std::stod(strs[14]), std::stod(strs[15]), std::stod(strs[20])
-													, std::stod(strs[16])	, std::stod(strs[17]), std::stod(strs[18]), std::stod(strs[21]));
+			cv::Mat Rt = (cv::Mat_<double>(4, 4) << std::stod(strs[10])		, std::stod(strs[11])	, std::stod(strs[12]), std::stod(strs[19])
+													, std::stod(strs[13])	, std::stod(strs[14])	, std::stod(strs[15]), std::stod(strs[20])
+													, std::stod(strs[16])	, std::stod(strs[17])	, std::stod(strs[18]), std::stod(strs[21])
+													, 0						, 0						, 0					,0);
 
-			cv::Mat projMat = K * Rt;
+			cv::Mat projMat = K * Rt(cv::Rect(0, 0, 4, 3));
 			//std::cout << "projecteion matrix: \n" << projMat << std::endl << std::endl;
 			_projectMats.push_back(std::move(projMat));
 			_K.push_back(std::move(K));
@@ -102,7 +103,7 @@ inline std::tuple<cv::Mat, cv::Mat, cv::Mat, cv::Mat> DataFile::getNext(int inde
 
 inline int DataFile::getDataSize() const
 {
-	return _dataSize - 1;
+	return _dataSize;
 }
 
 #endif

@@ -33,7 +33,7 @@ struct ImageModel
 	cv::Mat projectionMat;
 	cv::Mat intrinsicParams;
 	cv::Mat extrinsicParams;
-	int beta_cell_size = 2;
+	int beta_cell_size = 32;
 	std::vector<std::shared_ptr<Cell>> cells;
 
 	ImageModel(cv::Mat&& in_image, cv::Mat&& in_projMat,cv::Mat&& in_intrParam,cv::Mat&& in_extParam ) : 
