@@ -2,6 +2,7 @@
 #ifndef _COMMON_UTILS_H_
 #define _COMMON_UTILS_H_
 #include <opencv2/core/types.hpp>
+#include "opencv2/imgproc.hpp"
 #include "DataStructs.h"
 #include <set>
 
@@ -14,11 +15,14 @@ namespace Utils
 	}
 
 	/*
+	 * this function is taken from "Accurate, Dense, and Robust Multi-View Stereopsis"
+	 * by Yasutaka Furukawa and Jean Ponce
 	 * @param refImgCell a cell from the current image of interest
 	 * @param begin iterator to the first image to compare to the refImgCell
 	 * @param end iterator to the last image
+	 * @return std::vector<std::tuple<cv::Point2f,int,int>> : the point coordinates, cell index, image index
 	 */
-	static std::map<double, std::tuple<cv::Point2f, int, int>>  getCorrespondingFeaturesSetF(
+	static std::vector<std::tuple<cv::Point2f, int, int>>  getCorrespondingFeaturesSetF(
 		int pointIndex
 		, std::shared_ptr<Cell>& refImgCell
 		, cv::Mat& refImg_cameraMat
@@ -28,7 +32,7 @@ namespace Utils
 		, int FSetSize = 4)
 	{
 		
-		std::map<double, std::tuple<cv::Point2f, int, int>> F;
+		std::map<double, std::tuple<cv::Point2f, int, int>> temp;
 
 		const auto tmpRefPnt = refImgCell->key_points[pointIndex];
 		cv::Mat q = (cv::Mat_<double>(3, 1) << tmpRefPnt.pt.x, tmpRefPnt.pt.y, 1);
@@ -71,27 +75,49 @@ namespace Utils
 					const cv::Mat v = q.t() * fundMat; // v = [a,b,c]
 					auto dist_v = std::abs(v.dot(p)) / std::sqrt(std::pow(v.at<double>(0, 0), 2) + std::pow(v.at<double>(0, 1), 2));
 
-					if (F.size() < FSetSize)
+					if (temp.size() < FSetSize)
 					{
 						auto tmp_tpl = std::make_tuple(tmp_pnt.pt, cell_idx, (*img_it)->cells[cell_idx]->image_index);
-						F.insert(std::make_pair(dist_v ,tmp_tpl));
+						temp.insert(std::make_pair(dist_v ,tmp_tpl));
 					}
 					else
 					{
-						const auto F_end = F.rbegin();
+						const auto F_end = temp.rbegin();
 						if (dist_v < F_end->first)
 						{
-							F.erase(F_end->first);
+							temp.erase(F_end->first);
 							auto tmp_tpl = std::make_tuple(tmp_pnt.pt, cell_idx, (*img_it)->cells[cell_idx]->image_index);
-							F.insert(std::make_pair(dist_v, tmp_tpl));
+							temp.insert(std::make_pair(dist_v, tmp_tpl));
 						}
 					}
 				}
 			}
 		}
+
+		std::vector<std::tuple<cv::Point2f, int, int>> F;
+
+		std::for_each(temp.begin(), temp.end(), [&F](std::pair<double, std::tuple<cv::Point2f, int, int>> pair){F.push_back(pair.second);});
+		
 		return F;
 	}
-}
 
+	static std::vector<double> calcPhotometricConsistency(cv::Mat patch
+		, std::vector<std::shared_ptr<ImageModel>>::iterator begin
+		, std::vector<std::shared_ptr<ImageModel>>::iterator  end)
+	{
+		std::vector<double> photoConsistVals;
+		for (auto img_it = begin; img_it != end; ++img_it)
+		{
+			cv::Mat result;
+			cv::matchTemplate((*img_it)->image, patch, result, cv::TM_CCORR_NORMED);
+			double minval, maxval;
+			cv::Point minloc, maxloc;
+			cv::minMaxLoc(result, &minval, &maxval, &minloc, &maxloc);
+			photoConsistVals.push_back(maxval);
+		}
+
+		return photoConsistVals;
+	}
+}
 #endif
 

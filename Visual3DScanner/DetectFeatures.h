@@ -54,34 +54,78 @@ namespace MVS_calc
 
 
 
-	static void MatchKeyPoints(int index,int numOfImages2Match, std::vector<std::shared_ptr<ImageModel>>& image_Models)
+	static void MatchKeyPoints(int index,int numOfImages2Match, std::vector<std::shared_ptr<ImageModel>>& image_Models, double alpha_0 = 0.4,double alpha_1 = 0.7)
 	{
 		// Initial sparse set of patches P will go here
-
+		std::vector<cv::Mat> P;
 		// for each image I with optical center O
 		for (int imgIdx = 0; imgIdx < image_Models.size()-numOfImages2Match; ++imgIdx)
 		{
-			// for each feature f detected in I 
+			cv::Point2f O(image_Models[imgIdx]->intrinsicParams.at<double>(0,2), image_Models[imgIdx]->intrinsicParams.at<double>(1, 2));
+
+			// for each feature cell in I
 			for (int cellIdx = 0; cellIdx < image_Models[imgIdx]->cells.size(); ++cellIdx)
 			{
+				// use normalized cross correlation to get photo consistance of the image patch in the following images
+				auto photoConsistancies = Utils::calcPhotometricConsistency(
+											image_Models[imgIdx]->image(cv::Rect(image_Models[imgIdx]->cells[cellIdx]->first_x
+												, image_Models[imgIdx]->cells[cellIdx]->first_y
+												, image_Models[imgIdx]->cells[cellIdx]->size
+												, image_Models[imgIdx]->cells[cellIdx]->size))
+											, image_Models.begin() + imgIdx + 1
+											, image_Models.begin() + imgIdx + 1 + numOfImages2Match);
+				
 				// calculate F features for the image at imgIdx for each feature point in the image
 				for (auto ptCellIdx = 0; ptCellIdx < image_Models[imgIdx]->cells[cellIdx]->key_points.size(); ptCellIdx++)
 				{
 					auto it = image_Models.begin();
 					auto F = Utils::getCorrespondingFeaturesSetF(
-						ptCellIdx
-						, image_Models[imgIdx]->cells[cellIdx]
-						, image_Models[imgIdx]->intrinsicParams
-						, image_Models[imgIdx]->extrinsicParams
-						, image_Models.begin() + imgIdx + 1
-						, image_Models.begin() + imgIdx + 1 + numOfImages2Match);
+								ptCellIdx
+								, image_Models[imgIdx]->cells[cellIdx]
+								, image_Models[imgIdx]->intrinsicParams
+								, image_Models[imgIdx]->extrinsicParams
+								, image_Models.begin() + imgIdx + 1
+								, image_Models.begin() + imgIdx + 1 + numOfImages2Match);
 
+					// sort F in an increasing order of distance from O
+					std::map<double, std::tuple<cv::Point2f, int, int>> F_prime;
+
+					for (auto f : F)
+					{
+						auto dist = cv::norm(std::get<0>(f) - O);
+						F_prime.insert(std::make_pair(dist,f));
+					}
+
+					for (auto f_prime : F_prime)
+					{
+						auto R_p = image_Models[imgIdx];
+						// add values to T(p) that pass the photometric constraint
+						std::vector<std::shared_ptr<ImageModel>> T_p;
+						for (int i = 0; i < photoConsistancies.size(); ++i)
+						{
+							if (photoConsistancies[i] >= alpha_0)
+							{
+								T_p.push_back(*(image_Models.begin() + imgIdx + 1 + i));
+							}
+						}
+
+						// get initial calculation for c(p)
+						const auto projMat1 = image_Models[imgIdx]->projectionMat;
+						const auto projMat2 = image_Models[std::get<2>(f_prime.second)]->projectionMat;
+						const cv::Mat projPnt1 = (cv::Mat_<double>(2,1) << image_Models[imgIdx]->cells[cellIdx]->key_points[ptCellIdx].pt.x
+																	, image_Models[imgIdx]->cells[cellIdx]->key_points[ptCellIdx].pt.y);
+						const cv::Mat projPnt2 = (cv::Mat_<double>(2,1) << std::get<0>(f_prime.second).x, std::get<0>(f_prime.second).y);
+						cv::Mat c_p; // should be a 4x1 mat
+						cv::triangulatePoints(projMat1, projMat2, projPnt1, projPnt2, c_p);
+						// initial calculation for n(p)
+						const cv::Mat O_4x1 = (cv::Mat_<double>(4, 1) << O.x,O.y,1,1);
+						cv::Mat n_p = c_p - O_4x1;
+
+					}
 				}
 	
 			}
 		}
-		
-		
 	}
 
 	
