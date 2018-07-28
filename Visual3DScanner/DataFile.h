@@ -38,8 +38,8 @@ inline DataFile::DataFile(std::string dirName, std::string fileName)
 	//const std::regex e("\\+");
 	std::string l_dirName = dirName/*std::regex_replace(dirName, e, "/")*/;
 	std::replace(l_dirName.begin(),l_dirName.end(),'\\','/');
-	auto metaData = l_dirName + "/" + fileName;
-	int index = 0;
+	auto const metaData = l_dirName + "/" + fileName;
+	auto index = 0;
 
 	_fileStream = std::ifstream(metaData, std::ios_base::in | std::ios_base::binary);
 
@@ -64,8 +64,8 @@ inline DataFile::DataFile(std::string dirName, std::string fileName)
 		}
 		else
 		{
-			auto imgName = l_dirName + "/" + dataDir + "/" + strs[0];
-			cv::Mat img = cv::imread(imgName);
+			auto const imgName = l_dirName + "/" + dataDir + "/" + strs[0];
+			cv::Mat const img = cv::imread(imgName);
 			_images.push_back(img);
 			
 			// projection mat = K * [R t]

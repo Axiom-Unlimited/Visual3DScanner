@@ -34,13 +34,13 @@ namespace Utils
 		
 		std::map<double, std::tuple<cv::Point2f, int, int>> temp;
 
-		const auto tmpRefPnt = refImgCell->key_points[pointIndex];
+		auto const tmpRefPnt = refImgCell->key_points[pointIndex];
 		cv::Mat q = (cv::Mat_<double>(3, 1) << tmpRefPnt.pt.x, tmpRefPnt.pt.y, 1);
 
 		// iterate over the image models to find the the best features;
 		for (auto img_it = begin; img_it != end; ++img_it)
 		{
-			const auto numOfCells = (*img_it)->cells.size();
+			auto const numOfCells = (*img_it)->cells.size();
 			//calculate rotation of the image of interest to the next image==============================
 			cv::Mat comparatorImgTransform =  (*img_it)->extrinsicParams.clone();
 			//flip rotation 
@@ -53,10 +53,10 @@ namespace Utils
 			newCompRot.copyTo(comparatorImgTransform(cv::Rect(0, 0, 3, 3)));
 			newCompTrans.copyTo(comparatorImgTransform(cv::Rect(3, 0, 1, 3)));
 			// calculate transfrom to next image
-			const cv::Mat transform2NxtImg = refImg_homogRotTrans * comparatorImgTransform;
-			const cv::Mat rot2NxtImg = transform2NxtImg(cv::Rect(0,0,3,3));
+			cv::Mat const transform2NxtImg = refImg_homogRotTrans * comparatorImgTransform;
+			cv::Mat const rot2NxtImg = transform2NxtImg(cv::Rect(0,0,3,3));
 			cv::Mat trans2NxtImg = transform2NxtImg(cv::Rect(3,0,1,3));
-			const cv::Mat skew = (cv::Mat_<double>(3, 3) << 0								,-trans2NxtImg.at<double>(2,0)	, trans2NxtImg.at<double>(1,0)
+			cv::Mat const skew = (cv::Mat_<double>(3, 3) << 0								,-trans2NxtImg.at<double>(2,0)	, trans2NxtImg.at<double>(1,0)
 															, trans2NxtImg.at<double>(2, 0)	,0								, -trans2NxtImg.at<double>(0,0)
 															, -trans2NxtImg.at<double>(1,0)	,trans2NxtImg.at<double>(0,0)	, 0);
 
@@ -69,10 +69,10 @@ namespace Utils
 			{
 				for (int pnt_idx = 0; pnt_idx < (*img_it)->cells[cell_idx]->key_points.size(); ++pnt_idx)
 				{
-					const auto tmp_pnt = (*img_it)->cells[cell_idx]->key_points[pnt_idx];
-					const cv::Mat p = (cv::Mat_<double>(3,1) << tmp_pnt.pt.x, tmp_pnt.pt.y, 1);
+					auto const tmp_pnt = (*img_it)->cells[cell_idx]->key_points[pnt_idx];
+					cv::Mat const p = (cv::Mat_<double>(3,1) << tmp_pnt.pt.x, tmp_pnt.pt.y, 1);
 
-					const cv::Mat v = q.t() * fundMat; // v = [a,b,c]
+					cv::Mat const v = q.t() * fundMat; // v = [a,b,c]
 					auto dist_v = std::abs(v.dot(p)) / std::sqrt(std::pow(v.at<double>(0, 0), 2) + std::pow(v.at<double>(0, 1), 2));
 
 					if (temp.size() < FSetSize)
@@ -82,7 +82,7 @@ namespace Utils
 					}
 					else
 					{
-						const auto F_end = temp.rbegin();
+						auto const F_end = temp.rbegin();
 						if (dist_v < F_end->first)
 						{
 							temp.erase(F_end->first);
@@ -101,6 +101,11 @@ namespace Utils
 		return F;
 	}
 
+	/**
+	 * @param patch : the patch to get the photometric consistancy for
+	 * @param begin : iterator to the beginning of S(p)
+	 * @param end : iterator to the end of S(p)
+	 */
 	static std::vector<double> calcPhotometricConsistency(cv::Mat patch
 		, std::vector<std::shared_ptr<ImageModel>>::iterator begin
 		, std::vector<std::shared_ptr<ImageModel>>::iterator  end)

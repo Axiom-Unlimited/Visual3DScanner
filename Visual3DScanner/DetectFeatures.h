@@ -9,12 +9,17 @@
 
 namespace MVS_calc
 {
+	/**
+	 * @param imgModel : the ImageModel to get sift feature for
+	 * @param img_idx : the index of the image model of interest
+	 * @param numOfFeatures : the number of max number of feature per cell to detect
+	 */
 	static void DetectFeatures(std::shared_ptr<ImageModel> imgModel,int img_idx,int numOfFeatures = 4)
 	{
 		// by default cell size is set to 32 
-		const auto cellSize = imgModel->beta_cell_size; 
-		const auto xNumOfShift = imgModel->image.cols / cellSize;
-		const auto yNumOfShift = imgModel->image.rows / cellSize;
+		auto const cellSize = imgModel->beta_cell_size; 
+		auto const xNumOfShift = imgModel->image.cols / cellSize;
+		auto const yNumOfShift = imgModel->image.rows / cellSize;
 
 		auto sift = cv::xfeatures2d::SIFT::create(numOfFeatures);
 
@@ -24,11 +29,11 @@ namespace MVS_calc
 			for (int cols = 0; cols < xNumOfShift; ++cols)
 			{
 				// calculate the cell shift
-				const auto xPos = cellSize * cols;
-				const auto yPos = cellSize * rows;
+				auto const xPos = cellSize * cols;
+				auto const yPos = cellSize * rows;
 
 				// get a referene to the cell
-				cv::Mat cellRef = imgModel->image(cv::Rect(xPos,yPos,cellSize,cellSize));
+				auto const cellRef = imgModel->image(cv::Rect(xPos,yPos,cellSize,cellSize));
 
 				// calculate the keypoints and features
 				std::vector<cv::KeyPoint> key_points;
@@ -53,7 +58,15 @@ namespace MVS_calc
 	}
 
 
-
+	/**
+	 * @brief : this function is taken from "Accurate, Dense, and Robust Multi-View Stereopsis"
+	 * by Yasutaka Furukawa and Jean Ponce
+	 * @param index : image index in the data
+	 * @param numOfImages2Match : the total number of images in S(p)
+	 * @param image_Models : reference to the vector of image models
+	 * @param alpha_0 : the first photometric consistancy threshold
+	 * @param alpha_1 : the second photometric consistancy threshold 
+	 */
 	static void MatchKeyPoints(int index,int numOfImages2Match, std::vector<std::shared_ptr<ImageModel>>& image_Models, double alpha_0 = 0.4,double alpha_1 = 0.7)
 	{
 		// Initial sparse set of patches P will go here
@@ -110,15 +123,15 @@ namespace MVS_calc
 						}
 
 						// get initial calculation for c(p)
-						const auto projMat1 = image_Models[imgIdx]->projectionMat;
-						const auto projMat2 = image_Models[std::get<2>(f_prime.second)]->projectionMat;
-						const cv::Mat projPnt1 = (cv::Mat_<double>(2,1) << image_Models[imgIdx]->cells[cellIdx]->key_points[ptCellIdx].pt.x
+						auto const projMat1 = image_Models[imgIdx]->projectionMat;
+						auto const projMat2 = image_Models[std::get<2>(f_prime.second)]->projectionMat;
+						cv::Mat const projPnt1 = (cv::Mat_<double>(2,1) << image_Models[imgIdx]->cells[cellIdx]->key_points[ptCellIdx].pt.x
 																	, image_Models[imgIdx]->cells[cellIdx]->key_points[ptCellIdx].pt.y);
-						const cv::Mat projPnt2 = (cv::Mat_<double>(2,1) << std::get<0>(f_prime.second).x, std::get<0>(f_prime.second).y);
+						cv::Mat const projPnt2 = (cv::Mat_<double>(2,1) << std::get<0>(f_prime.second).x, std::get<0>(f_prime.second).y);
 						cv::Mat c_p; // should be a 4x1 mat
 						cv::triangulatePoints(projMat1, projMat2, projPnt1, projPnt2, c_p);
 						// initial calculation for n(p)
-						const cv::Mat O_4x1 = (cv::Mat_<double>(4, 1) << O.x,O.y,1,1);
+						cv::Mat const O_4x1 = (cv::Mat_<double>(4, 1) << O.x,O.y,1,1);
 						cv::Mat n_p = c_p - O_4x1;
 
 					}
